@@ -54,10 +54,14 @@ async function callAI(cfg, system, prompt) {
   if (!res.ok) {
     const t = await res.text().catch(() => '');
     console.error('AI xatolik', cfg.provider, res.status, t.slice(0, 300));
-    const msg = res.status === 401 || res.status === 403 ? "AI kaliti noto'g'ri yoki ruxsat yo'q."
-      : res.status === 429 ? "AI limiti tugadi (bepul rejada ko'p so'rov yuborildi). Birozdan keyin urinib ko'ring."
-      : res.status === 404 ? "Model nomi noto'g'ri bo'lishi mumkin. Admin → Sozlamalar → AI da modelni tekshiring."
+    let detail = '';
+    try { const j = JSON.parse(t); detail = j.error?.message || j.error || j.message || ''; if (typeof detail !== 'string') detail = JSON.stringify(detail); } catch { detail = t; }
+    detail = String(detail).replace(/\s+/g, ' ').slice(0, 220);
+    const base = res.status === 401 || res.status === 403 ? "AI kaliti noto'g'ri yoki ruxsat yo'q."
+      : res.status === 429 ? "AI limiti tugadi yoki juda tez so'rov yuborildi. Birozdan keyin urinib ko'ring."
+      : res.status === 404 ? "Model yoki manzil topilmadi."
       : `AI xizmati xatolik qaytardi (${res.status}).`;
+    const msg = `${base} [${cfg.provider} · ${cfg.model}] ${detail}`;
     throw new HttpError(502, msg);
   }
   const data = await res.json();
